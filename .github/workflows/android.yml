@@ -31,10 +31,13 @@ jobs:
 
     - name: Build C++ Native Engine
       run: |
-        # Используем предустановленный в системе Android NDK r27
-        # Путь по умолчанию на виртуальных машинах GitHub: /usr/local/lib/android/sdk/ndk/27.x
-        # Нам достаточно указать его для скрипта сборщика
-        export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973
+        # Автоматически находим точный путь к предустановленному NDK r27
+        export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/27* | head -n 1)
+        echo "Found NDK path: $ANDROID_NDK_HOME"
+        
+        # Добавляем путь к ndk-build в системный PATH, чтобы скрипт его точно увидел
+        export PATH=$ANDROID_NDK_HOME:$PATH
+        
         ./build_native.sh
 
     - name: Build APK with Gradle
