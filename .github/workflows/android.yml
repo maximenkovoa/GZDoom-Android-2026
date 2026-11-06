@@ -19,8 +19,31 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+    - name: Setup Android NDK
+      uses: android-actions/setup-android@v3
+      with:
+        ndk-version: '27.0.12077973'
+
+    - name: Clean Hardcoded Paths
+      run: |
+        # Удаляем жестко прописанный путь автора к Java, чтобы использовать системный
+        sed -i '/org.gradle.java.home/d' gradle.properties
+
+    - name: Grant execute permissions
+      run: |
+        chmod +x gradlew
+        chmod +x build_native.sh
+
+    - name: Build C++ Native Engine
+      run: |
+        export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973
+        ./build_native.sh
 
     - name: Build APK with Gradle
       run: ./gradlew :doom:assembleDebug
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: GZDoom-Android-2026-APK
+        path: doom/build/outputs/apk/debug/*.apk
