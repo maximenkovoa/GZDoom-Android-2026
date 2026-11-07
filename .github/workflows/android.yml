@@ -19,14 +19,25 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Clean Hardcoded Paths & Exclude WADs
+    - name: Clean Hardcoded Paths & Stub License
       run: |
-        # Удаляем жестко прописанный путь автора к Java
+        # 1. Удаляем жестко прописанный путь автора к Java
         sed -i '/org.gradle.java.home/d' gradle.properties
         
-        # Удаляем встроенные файлы Freedoom для облегчения APK
+        # 2. Удаляем встроенные файлы Freedoom для облегчения APK
         find . -name "freedoom1.wad" -delete
         find . -name "freedoom2.wad" -delete
+
+        # 3. Решаем проблему с license.h: создаем структуру папок и пустой файл-заглушку
+        # Компилятор ищет его относительно папки Clibs_OpenTouch
+        mkdir -p doom/src/main/jni/Clibs_OpenTouch/secure/license
+        touch doom/src/main/jni/Clibs_OpenTouch/secure/license/license.h
+        
+        # 4. На всякий случай комментируем саму строчку инклюда в файле, чтобы наверняка
+        TARGET_FILE="doom/src/main/jni/Clibs_OpenTouch/android_jni_inc.cpp"
+        if [ -f "$TARGET_FILE" ]; then
+          sed -i 's|#include "./secure/license/license.h"|// #include "./secure/license/license.h"|g' "$TARGET_FILE"
+        fi
 
     - name: Pre-Configure App ABI
       run: |
@@ -44,7 +55,6 @@ jobs:
     - name: Force Binary Stripping (Bypass Debug Size)
       run: |
         export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/27* | head -n 1)
-        # Находим инструмент llvm-strip
         STRIP_TOOL=$(find $ANDROID_NDK_HOME -name "llvm-strip" | head -n 1)
         # Принудительно вычищаем все .so библиотеки до состояния чистейшего Release
         find doom/src/main/libs/arm64-v8a/ -name "*.so" -exec $STRIP_TOOL --strip-all {} \; || true
