@@ -1,4 +1,4 @@
-name: Android CI Bypass Protection & Fix Linker
+name: Android CI
 
 on:
   push:
@@ -19,68 +19,39 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Clean Hardcoded Paths & Hack License Logic & Fix Abseil
+    - name: Clean Hardcoded Paths
       run: |
-        # 1. Удаляем жестко прописанный путь автора к Java
+        # Удаляем жестко прописанный путь автора к Java
         sed -i '/org.gradle.java.home/d' gradle.properties
-        
-        # 2. Удаляем встроенные файлы Freedoom для облегчения APK
+        # Удаляем встроенные файлы Freedoom из ресурсов перед сборкой для облегчения APK
         find . -name "freedoom1.wad" -delete
         find . -name "freedoom2.wad" -delete
 
-        # 3. Создаем секретные папки и файлы-заглушки для обхода защиты Эмиля
-        mkdir -p doom/src/main/jni/Clibs_OpenTouch/secure/license
-        touch doom/src/main/jni/Clibs_OpenTouch/secure/license/license.h
-        touch doom/src/main/jni/Clibs_OpenTouch/secure/check_include.h
-        
-        # Внедряем фейковую функцию checkLicense и подменяем вызовы на успех (return 1)
-        TARGET_FILE="doom/src/main/jni/Clibs_OpenTouch/android_jni_inc.cpp"
-        if [ -f "$TARGET_FILE" ]; then
-          sed -i '20i int checkLicense(void* env, void* key, void* pkg) { return 1; }' "$TARGET_FILE"
-          sed -i 's/return checkLicense(env, keyGlobal, pkgGlobal);/return 1;/g' "$TARGET_FILE"
-          sed -i 's/check = checkLicense(env, key, pkg);/check = 1;/g' "$TARGET_FILE"
-          sed -i 's|#include "./secure/check_include.h"|// #include "./secure/check_include.h"|g' "$TARGET_FILE"
-        fi
-
-        # 4. ФИКС ОШИБКИ ЛИНКЕРА (Abseil Symbolize):
-        # Принудительно отключаем внутреннюю символизацию Abseil в файле настроек компиляции движка GZDoom.
-        # Это заставит линкер пропустить отсутствующий символ absl::Symbolize.
-        MAKE_FILE="doom/src/main/jni/engine/gzdoom/mobile/Android.mk"
-        if [ -f "$MAKE_FILE" ]; then
-          sed -i 's/LOCAL_CFLAGS += /LOCAL_CFLAGS += -DABSL_INTERNAL_HAS_SYMBOLIZE=0 /g' "$MAKE_FILE"
-        fi
-
-    - name: Pre-Configure App ABI
+    - name: Grant execute permissions
       run: |
-        # Гарантируем сборку строго под 64-бит
-        sed -i 's/APP_ABI := .*/APP_ABI := arm64-v8a/g' doom/src/main/jni/Application.mk || true
-
-    - name: Build C++ Native Engine
-      run: |
-        export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/27* | head -n 1)
-        export PATH=$ANDROID_NDK_HOME:$PATH
-        chmod +x build_native.sh
         chmod +x gradlew
-        ./build_native.sh
+        chmod +x build_native.sh
 
-    - name: Force Binary Stripping (Bypass Debug Size)
+    - name: Build C++ Native Engine (Only arm64-v8a)
       run: |
+        # Находим предустановленный NDK r27 на виртуальной машине
         export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/27* | head -n 1)
-        STRIP_TOOL=$(find $ANDROID_NDK_HOME -name "llvm-strip" | head -n 1)
-        # Вычищаем весь отладочный мусор из скомпилированных .so файлов
-        find doom/src/main/libs/arm64-v8a/ -name "*.so" -exec $STRIP_TOOL --strip-all {} \; || true
+        echo "Found NDK path: $ANDROID_NDK_HOME"
+        # Добавляем путь к ndk-build в системный PATH, чтобы скрипт его точно увидел
+        export PATH=$ANDROID_NDK_HOME:$PATH
 
-    - name: Build APK
-      run: ./gradlew :doom:assembleDebug
+    - name: Build RELEASE APK with Gradle
+      run: ./gradlew :doom:assembleRelease
 
-    - name: Sign APK (For easy installation)
+    - name: Sign Release APK (For easy installation)
       run: |
-        APK_PATH=$(find doom/build/outputs/apk/debug/ -name "*.apk" | head -n 1)
+        APK_PATH=$(find doom/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+        # Создаем тестовый ключ на лету для безопасной установки на Android 12+
         keytool -genkey -v -keystore test.keystore -alias test -keyalg RSA -keysize 2024 -validity 10000 -dname "CN=AndroidDebug,O=Android,C=US" -storepass android -keypass android
-        $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks test.keystore --ks-key-alias test --ks-pass pass:android --key-pass pass:android --out doom/build/outputs/apk/debug/GZDoom-2026-Stripped.apk $APK_PATH
+        $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks test.keystore --ks-key-alias test --ks-pass pass:android --key-pass pass:android --out doom/build/outputs/apk/release/GZDoom-2026-Optimized.apk $APK_PATH
 
-    - name: Upload Optimized APK
+    - name: Upload Clean APK
       uses: actions/upload-artifact@v4
       with:
-        name: GZDoom-2026-Stripped-Arm64
-        path: doom/build/outputs/apk/debug/GZDoom-2026-Stripped.apk
+        name: GZDoom-2026-Light-Arm64
+        path: doom/build/outputs/apk/release/GZDoom-2026-Optimized.apk
