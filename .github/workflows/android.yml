@@ -19,7 +19,7 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Clean Hardcoded Paths & Stub License
+    - name: Clean Hardcoded Paths & Hack License Logic
       run: |
         # 1. Удаляем жестко прописанный путь автора к Java
         sed -i '/org.gradle.java.home/d' gradle.properties
@@ -28,15 +28,24 @@ jobs:
         find . -name "freedoom1.wad" -delete
         find . -name "freedoom2.wad" -delete
 
-        # 3. Решаем проблему с license.h: создаем структуру папок и пустой файл-заглушку
-        # Компилятор ищет его относительно папки Clibs_OpenTouch
+        # 3. Создаем ВСЕ секретные папки и пустые файлы-заглушки, которые ищет компилятор
         mkdir -p doom/src/main/jni/Clibs_OpenTouch/secure/license
         touch doom/src/main/jni/Clibs_OpenTouch/secure/license/license.h
+        touch doom/src/main/jni/Clibs_OpenTouch/secure/check_include.h
         
-        # 4. На всякий случай комментируем саму строчку инклюда в файле, чтобы наверняка
+        # 4. Взламываем логику в самом файле android_jni_inc.cpp
         TARGET_FILE="doom/src/main/jni/Clibs_OpenTouch/android_jni_inc.cpp"
         if [ -f "$TARGET_FILE" ]; then
-          sed -i 's|#include "./secure/license/license.h"|// #include "./secure/license/license.h"|g' "$TARGET_FILE"
+          # Создаем фейковую пустую функцию checkLicense, чтобы компилятор не ругался на её отсутствие
+          # Она всегда будет возвращать 1 (true) — лицензия чиста!
+          sed -i '20i int checkLicense(void* env, void* key, void* pkg) { return 1; }' "$TARGET_FILE"
+          
+          # Заменяем вызовы реальной проверки на безусловный возврат единицы (успех)
+          sed -i 's/return checkLicense(env, keyGlobal, pkgGlobal);/return 1;/g' "$TARGET_FILE"
+          sed -i 's/check = checkLicense(env, key, pkg);/check = 1;/g' "$TARGET_FILE"
+          
+          # Комментируем вредоносный второй инклюд защиты
+          sed -i 's|#include "./secure/check_include.h"|// #include "./secure/check_include.h"|g' "$TARGET_FILE"
         fi
 
     - name: Pre-Configure App ABI
