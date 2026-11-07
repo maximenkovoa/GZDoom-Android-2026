@@ -19,32 +19,51 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Clean Hardcoded Paths
+    - name: Clean Hardcoded Paths & Exclude WADs
       run: |
         # Удаляем жестко прописанный путь автора к Java
         sed -i '/org.gradle.java.home/d' gradle.properties
+        
+        # Удаляем встроенные файлы Freedoom из ресурсов перед сборкой для облегчения APK
+        find . -name "freedoom1.wad" -delete
+        find . -name "freedoom2.wad" -delete
+
+    - name: Setup Android NDK
+      uses: android-actions/setup-android@v3
+      with:
+        ndk-version: '27.0.12077973'
 
     - name: Grant execute permissions
       run: |
         chmod +x gradlew
         chmod +x build_native.sh
 
-    - name: Build C++ Native Engine
+    - name: Build C++ Native Engine (Only arm64-v8a)
       run: |
-        # Автоматически находим точный путь к предустановленному NDK r27
         export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/27* | head -n 1)
-        echo "Found NDK path: $ANDROID_NDK_HOME"
-        
-        # Добавляем путь к ndk-build в системный PATH, чтобы скрипт его точно увидел
         export PATH=$ANDROID_NDK_HOME:$PATH
+        
+        # Заставляем скрипт автора компилировать код ТОЛЬКО под современный 64-битный Android
+        # (Заменяем оригинальный список архитектур на одну целевую)
+        sed -i 's/APP_ABI := .*/APP_ABI := arm64-v8a/g' doom/src/main/jni/Application.mk || true
         
         ./build_native.sh
 
-    - name: Build APK with Gradle
-      run: ./gradlew :doom:assembleDebug
+    - name: Build RELEASE APK with Gradle
+      run: ./gradlew :doom:assembleRelease
 
-    - name: Upload APK Artifact
+    - name: Sign Release APK (For easy installation)
+      # Используем встроенный инструмент, чтобы подписать тестовым ключом, иначе Android 15 выдаст ошибку
+      run: |
+        APK_PATH=$(find doom/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+        $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks-pass pass:android --ks .github/workflows/android.yml --out doom/build/outputs/apk/release/GZDoom-2026-Optimized.apk $APK_PATH || true
+        # Если apksigner ругнется на наш yml как на ключ, мы создадим правильный keystore на лету:
+        keytool -genkey -v -keystore test.keystore -alias test -keyalg RSA -keysize 2024 -validity 10000 -dname "CN=AndroidDebug,O=Android,C=US" -storepass android -keypass android
+        $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks test.keystore --ks-key-alias test --ks-pass pass:android --key-pass pass:android --out doom/build/outputs/apk/release/GZDoom-2026-Optimized.apk $APK_PATH
+
+    - name: Upload Clean APK
       uses: actions/upload-artifact@v4
       with:
-        name: GZDoom-Android-2026-APK
-        path: doom/build/outputs/apk/debug/*.apk
+        name: GZDoom-2026-Light-Arm64
+        # Загружаем только наш готовый, подписанный и облегченный файл
+        path: doom/build/outputs/apk/release/GZDoom-2026-Optimized.apk
