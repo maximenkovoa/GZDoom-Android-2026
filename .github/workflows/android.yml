@@ -1,4 +1,4 @@
-name: Android CI Bypass Protection
+name: Android CI Bypass Protection & Fix Linker
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Clean Hardcoded Paths & Hack License Logic
+    - name: Clean Hardcoded Paths & Hack License Logic & Fix Abseil
       run: |
         # 1. Удаляем жестко прописанный путь автора к Java
         sed -i '/org.gradle.java.home/d' gradle.properties
@@ -28,29 +28,31 @@ jobs:
         find . -name "freedoom1.wad" -delete
         find . -name "freedoom2.wad" -delete
 
-        # 3. Создаем ВСЕ секретные папки и пустые файлы-заглушки, которые ищет компилятор
+        # 3. Создаем секретные папки и файлы-заглушки для обхода защиты Эмиля
         mkdir -p doom/src/main/jni/Clibs_OpenTouch/secure/license
         touch doom/src/main/jni/Clibs_OpenTouch/secure/license/license.h
         touch doom/src/main/jni/Clibs_OpenTouch/secure/check_include.h
         
-        # 4. Взламываем логику в самом файле android_jni_inc.cpp
+        # Внедряем фейковую функцию checkLicense и подменяем вызовы на успех (return 1)
         TARGET_FILE="doom/src/main/jni/Clibs_OpenTouch/android_jni_inc.cpp"
         if [ -f "$TARGET_FILE" ]; then
-          # Создаем фейковую пустую функцию checkLicense, чтобы компилятор не ругался на её отсутствие
-          # Она всегда будет возвращать 1 (true) — лицензия чиста!
           sed -i '20i int checkLicense(void* env, void* key, void* pkg) { return 1; }' "$TARGET_FILE"
-          
-          # Заменяем вызовы реальной проверки на безусловный возврат единицы (успех)
           sed -i 's/return checkLicense(env, keyGlobal, pkgGlobal);/return 1;/g' "$TARGET_FILE"
           sed -i 's/check = checkLicense(env, key, pkg);/check = 1;/g' "$TARGET_FILE"
-          
-          # Комментируем вредоносный второй инклюд защиты
           sed -i 's|#include "./secure/check_include.h"|// #include "./secure/check_include.h"|g' "$TARGET_FILE"
+        fi
+
+        # 4. ФИКС ОШИБКИ ЛИНКЕРА (Abseil Symbolize):
+        # Принудительно отключаем внутреннюю символизацию Abseil в файле настроек компиляции движка GZDoom.
+        # Это заставит линкер пропустить отсутствующий символ absl::Symbolize.
+        MAKE_FILE="doom/src/main/jni/engine/gzdoom/mobile/Android.mk"
+        if [ -f "$MAKE_FILE" ]; then
+          sed -i 's/LOCAL_CFLAGS += /LOCAL_CFLAGS += -DABSL_INTERNAL_HAS_SYMBOLIZE=0 /g' "$MAKE_FILE"
         fi
 
     - name: Pre-Configure App ABI
       run: |
-        # Гарантируем сборку только под 64-бит
+        # Гарантируем сборку строго под 64-бит
         sed -i 's/APP_ABI := .*/APP_ABI := arm64-v8a/g' doom/src/main/jni/Application.mk || true
 
     - name: Build C++ Native Engine
@@ -65,7 +67,7 @@ jobs:
       run: |
         export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/27* | head -n 1)
         STRIP_TOOL=$(find $ANDROID_NDK_HOME -name "llvm-strip" | head -n 1)
-        # Принудительно вычищаем все .so библиотеки до состояния чистейшего Release
+        # Вычищаем весь отладочный мусор из скомпилированных .so файлов
         find doom/src/main/libs/arm64-v8a/ -name "*.so" -exec $STRIP_TOOL --strip-all {} \; || true
 
     - name: Build APK
