@@ -26,14 +26,6 @@ jobs:
         # Удаляем встроенные файлы Freedoom из ресурсов перед сборкой для облегчения APK
         find . -name "freedoom1.wad" -delete
         find . -name "freedoom2.wad" -delete
-        # 3. Вырезаем встроенные .sf2 и .pat звуковые банки из исходников аудио-библиотек,
-        # так как пользователь будет использовать свой внешний ChoriumRevA.SF2
-        find doom/src/main/jni/AudioLibs_OpenTouch -name "*.sf2" -delete
-        find doom/src/main/jni/AudioLibs_OpenTouch -name "*.pat" -delete
-        # 4. Оптимизируем настройки компиляции аудио (отключаем тяжелые и ненужные форматы)
-        # Находим файлы конфигурации Android.mk в аудио-библиотеках и отключаем лишнее
-        find doom/src/main/jni/AudioLibs_OpenTouch -name "Android.mk" -exec sed -i 's/SUPPORT_GME := 1/SUPPORT_GME := 0/g' {} + || true
-        find doom/src/main/jni/AudioLibs_OpenTouch -name "Android.mk" -exec sed -i 's/SUPPORT_MODPLUG := 1/SUPPORT_MODPLUG := 0/g' {} + || true
 
     - name: Grant execute permissions
       run: |
