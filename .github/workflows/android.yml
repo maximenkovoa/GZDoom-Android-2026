@@ -12,46 +12,76 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: set up JDK 17
+    - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
         cache: gradle
 
-    - name: Clean Hardcoded Paths
+    - name: Prepare sources & patches
       run: |
-        # Удаляем жестко прописанный путь автора к Java
+        # 1. Удаляем жестко прописанный путь автора к Java
         sed -i '/org.gradle.java.home/d' gradle.properties
-        # Удаляем встроенные файлы Freedoom из ресурсов перед сборкой для облегчения APK
+
+        # 2. Удаляем встроенные WAD-файлы Freedoom для облегчения APK (при необходимости)
         find . -name "freedoom1.wad" -delete
         find . -name "freedoom2.wad" -delete
+
+        # 3. Удаляем старые 32-битные .so, чтобы в APK попали только свежие arm64-v8a
+        rm -rf doom/src/main/libs/armeabi-v7a
+
+        # 4. Включаем вторую кнопку стрельбы (attack2) над областью бега в C++
+        sed -i 's/"attack2", touchcontrols::RectF(3, 5, 6, 8), "shoot", KEY_SHOOT, false, true/"attack2", touchcontrols::RectF(3, 4, 6, 7), "shoot", KEY_SHOOT, false, false/' \
+          doom/src/main/jni/Clibs_OpenTouch/idtech1/touch_interface.cpp
+
+        # 5. Включаем GAME_OPTION_TOUCHJOY_MULTITOUCH (0x2000), чтобы убрать игнор/перехват касаний при мультитаче
+        sed -i 's/options |= 0x10;/options |= 0x10 | 0x2000;/' \
+          doom/src/main/java/org/libsdl/app/SDLOpenTouch.java
+
+        # 6. Гарантируем arm64-v8a в Application.mk
+        sed -i 's/^APP_ABI.*/APP_ABI := arm64-v8a/' doom/src/main/jni/Application.mk
+
+    - name: Rebuild engine PK3 assets (fixes menu strings)
+      run: |
+        sudo apt-get update && sudo apt-get install -y zip
+        if [ -d "doom/src/main/jni/engine/gzdoom/wadsrc/static" ]; then
+          (cd doom/src/main/jni/engine/gzdoom/wadsrc/static && zip -r -0 "$GITHUB_WORKSPACE/doom/src/main/assets/uzdoom.pk3" .)
+        fi
+        if [ -d "doom/src/main/jni/engine/gzdoom/wadsrc_extra/static" ]; then
+          (cd doom/src/main/jni/engine/gzdoom/wadsrc_extra/static && zip -r -0 "$GITHUB_WORKSPACE/doom/src/main/assets/uzdoom_game_support.pk3" .)
+        fi
 
     - name: Grant execute permissions
       run: |
         chmod +x gradlew
         chmod +x build_native.sh
 
-    - name: Build C++ Native Engine
+    - name: Build C++ Native Engine (arm64-v8a)
       run: |
-        # Находим предустановленный NDK r27 на виртуальной машине
-        export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/27* | head -n 1)
+        export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/27* | sort -V | tail -1)
         echo "Found NDK path: $ANDROID_NDK_HOME"
-        # Добавляем путь к ndk-build в системный PATH, чтобы скрипт его точно увидел
-        export PATH=$ANDROID_NDK_HOME:$PATH
-        # Заставляем скрипт автора компилировать код ТОЛЬКО под современный 64-битный Android
-        # (Заменяем оригинальный список архитектур на одну целевую)
-        sed -i 's/APP_ABI := .*/APP_ABI := arm64-v8a/g' doom/src/main/jni/Application.mk || true
+        ./build_native.sh
 
-    - name: Build APK with Gradle
-      run: ./gradlew :doom:assembleRelease
+    - name: Build RELEASE APK with Gradle
+      run: ./gradlew :doom:assembleRelease --stacktrace
 
-    - name: Sign Release APK (For easy installation)
+    - name: Align (16KB) & Sign Release APK
       run: |
-        APK_PATH=$(find doom/build/outputs/apk/release/ -name "*.apk" | head -n 1)
-        # Создаем тестовый ключ на лету для безопасной установки на Android 12+
-        keytool -genkey -v -keystore test.keystore -alias test -keyalg RSA -keysize 2024 -validity 10000 -dname "CN=AndroidDebug,O=Android,C=US" -storepass android -keypass android
-        $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks test.keystore --ks-key-alias test --ks-pass pass:android --key-pass pass:android --out doom/build/outputs/apk/release/GZDoom-2026.apk $APK_PATH
+        BUILD_TOOLS=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+        UNSIGNED_APK=$(find doom/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+        ALIGNED_APK="doom/build/outputs/apk/release/aligned.apk"
+        FINAL_APK="doom/build/outputs/apk/release/GZDoom-2026.apk"
+
+        # Обязательное 16KB выравнивание для несжатых .so (Android 15+) перед подписью
+        "$BUILD_TOOLS/zipalign" -P 16 -f -v 4 "$UNSIGNED_APK" "$ALIGNED_APK"
+
+        keytool -genkey -v -keystore test.keystore -alias test -keyalg RSA -keysize 2048 -validity 10000 \
+          -dname "CN=AndroidRelease,O=Android,C=US" -storepass android -keypass android
+
+        "$BUILD_TOOLS/apksigner" sign --ks test.keystore --ks-key-alias test \
+          --ks-pass pass:android --key-pass pass:android \
+          --out "$FINAL_APK" "$ALIGNED_APK"
 
     - name: Upload Clean APK
       uses: actions/upload-artifact@v4
