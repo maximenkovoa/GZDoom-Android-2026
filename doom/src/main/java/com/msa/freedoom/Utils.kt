@@ -42,21 +42,9 @@ object Utils {
 
         // Freedoom additions
         copyAsset(responsibleActivity, "freedoom1.wad", fullBaseDir)
-        copyAsset(responsibleActivity, "freedoom2.wad", fullBaseDir)
         // Freedoom licence and credits
         copyAsset(responsibleActivity, "COPYING.txt", fullBaseDir)
         copyAsset(responsibleActivity, "CREDITS.txt", fullBaseDir)
-
-        // Add Romero's Sigil addon wad
-        copyAsset(responsibleActivity, "SIGIL_v1_21.wad", fullWadDir)
-        // Credits
-        copyAsset(responsibleActivity, "SIGIL_v1_21.txt", fullWadDir)
-
-        // Add 10sector and 10sector2 wads, megawads with ultra small levels
-        copyAsset(responsibleActivity, "10sector.wad", fullWadDir)
-        copyAsset(responsibleActivity, "10sector.txt", fullWadDir)
-        copyAsset(responsibleActivity, "10secto2.wad", fullWadDir)
-        copyAsset(responsibleActivity, "10secto2.txt", fullWadDir)
 
         // copy over gzdoom mod/package files (selectable as add-on chips;
         // GZDoom 4.15 also autoloads the copies placed in the base dir).

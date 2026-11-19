@@ -21,35 +21,52 @@ jobs:
 
     - name: Prepare sources & patches
       run: |
-        # 1. Удаляем жестко прописанный путь автора к Java
+        # Удаляем жестко прописанный путь автора к Java
         sed -i '/org.gradle.java.home/d' gradle.properties
 
-        # 2. Удаляем встроенные WAD-файлы Freedoom для облегчения APK (при необходимости)
-        find . -name "freedoom1.wad" -delete
-        find . -name "freedoom2.wad" -delete
-
-        # 3. Удаляем старые 32-битные .so, чтобы в APK попали только свежие arm64-v8a
+        # Удаляем старые 32-битные .so, чтобы в APK попали только свежие arm64-v8a
         rm -rf doom/src/main/libs/armeabi-v7a
 
-        # 4. Включаем вторую кнопку стрельбы (attack2) над областью бега в C++
+        # Включаем вторую кнопку стрельбы (attack2) над областью бега в C++
         sed -i 's/"attack2", touchcontrols::RectF(3, 5, 6, 8), "shoot", KEY_SHOOT, false, true/"attack2", touchcontrols::RectF(3, 4, 6, 7), "shoot", KEY_SHOOT, false, false/' \
           doom/src/main/jni/Clibs_OpenTouch/idtech1/touch_interface.cpp
 
-        # 5. Включаем GAME_OPTION_TOUCHJOY_MULTITOUCH (0x2000), чтобы убрать игнор/перехват касаний при мультитаче
+        # Включаем GAME_OPTION_TOUCHJOY_MULTITOUCH (0x2000)
         sed -i 's/options |= 0x10;/options |= 0x10 | 0x2000;/' \
           doom/src/main/java/org/libsdl/app/SDLOpenTouch.java
 
-        # 6. Гарантируем arm64-v8a в Application.mk
+        # Гарантируем arm64-v8a в Application.mk
         sed -i 's/^APP_ABI.*/APP_ABI := arm64-v8a/' doom/src/main/jni/Application.mk
 
-    - name: Rebuild engine PK3 assets (fixes menu strings)
+        # Включаем gore-мод (extras_gore.pk3) по умолчанию после установки
+        sed -i 's/"enable_gore_mod", false/"enable_gore_mod", true/g' \
+          doom/src/main/java/com/msa/freedoom/ui/launch/LaunchState.kt \
+          doom/src/main/java/com/msa/freedoom/ui/options/OptionsScreen.kt
+
+        # Ограничиваем FPS по умолчанию
+        sed -i 's/+set midi_dmxgus 0/+set midi_dmxgus 0 +set vid_maxfps 35/' \
+          doom/src/main/java/com/msa/freedoom/ui/launch/LaunchArgs.kt
+
+    - name: Rebuild engine PK3 assets cleanly (using official compile.py)
       run: |
         sudo apt-get update && sudo apt-get install -y zip
-        if [ -d "doom/src/main/jni/engine/gzdoom/wadsrc/static" ]; then
-          (cd doom/src/main/jni/engine/gzdoom/wadsrc/static && zip -r -0 "$GITHUB_WORKSPACE/doom/src/main/assets/uzdoom.pk3" .)
+        TRANS_SCRIPT="doom/src/main/jni/engine/gzdoom/libraries/Translation/scripts/compile.py"
+
+        if [ -f "$TRANS_SCRIPT" ] && [ -d "doom/src/main/jni/engine/gzdoom/wadsrc/static" ]; then
+          python3 "$TRANS_SCRIPT" --recipe ENGINE --output doom/src/main/jni/engine/gzdoom/wadsrc/static/language.csv
+          rm -f doom/src/main/assets/uzdoom.pk3
+          (cd doom/src/main/jni/engine/gzdoom/wadsrc/static && zip -r -9 "$GITHUB_WORKSPACE/doom/src/main/assets/uzdoom.pk3" .)
         fi
-        if [ -d "doom/src/main/jni/engine/gzdoom/wadsrc_extra/static" ]; then
-          (cd doom/src/main/jni/engine/gzdoom/wadsrc_extra/static && zip -r -0 "$GITHUB_WORKSPACE/doom/src/main/assets/uzdoom_game_support.pk3" .)
+
+        if [ -f "$TRANS_SCRIPT" ] && [ -d "doom/src/main/jni/engine/gzdoom/wadsrc_extra/static" ]; then
+          python3 "$TRANS_SCRIPT" --recipe GAMES --output doom/src/main/jni/engine/gzdoom/wadsrc_extra/static/language.csv
+          rm -f doom/src/main/assets/uzdoom_game_support.pk3
+          (cd doom/src/main/jni/engine/gzdoom/wadsrc_extra/static && zip -r -9 "$GITHUB_WORKSPACE/doom/src/main/assets/uzdoom_game_support.pk3" .)
+        fi
+
+        if [ -d "doom/src/main/jni/engine/gzdoom/wadsrc_wide/static" ]; then
+          rm -f doom/src/main/assets/game_widescreen_gfx.pk3
+          (cd doom/src/main/jni/engine/gzdoom/wadsrc_wide/static && zip -r -9 "$GITHUB_WORKSPACE/doom/src/main/assets/game_widescreen_gfx.pk3" .)
         fi
 
     - name: Grant execute permissions
@@ -61,7 +78,7 @@ jobs:
       run: |
         export ANDROID_NDK_HOME=$(ls -d $ANDROID_HOME/ndk/27* | sort -V | tail -1)
         echo "Found NDK path: $ANDROID_NDK_HOME"
-        ./build_native.sh
+        ./build_native.sh APP_OPTIM=release
 
     - name: Build RELEASE APK with Gradle
       run: ./gradlew :doom:assembleRelease --stacktrace
@@ -73,7 +90,6 @@ jobs:
         ALIGNED_APK="doom/build/outputs/apk/release/aligned.apk"
         FINAL_APK="doom/build/outputs/apk/release/GZDoom-2026.apk"
 
-        # Обязательное 16KB выравнивание для несжатых .so (Android 15+) перед подписью
         "$BUILD_TOOLS/zipalign" -P 16 -f -v 4 "$UNSIGNED_APK" "$ALIGNED_APK"
 
         keytool -genkey -v -keystore test.keystore -alias test -keyalg RSA -keysize 2048 -validity 10000 \
