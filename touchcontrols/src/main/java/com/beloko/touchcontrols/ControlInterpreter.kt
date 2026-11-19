@@ -68,7 +68,9 @@ class ControlInterpreter(
         } else if (actionCode == MotionEvent.ACTION_DOWN) {
             val x = event.x / screenWidth
             val y = event.y / screenHeight
-            quakeIf.touchEvent_if(1, 0, x, y)
+            val index = event.actionIndex
+            val pid = event.getPointerId(index)
+            quakeIf.touchEvent_if(1, pid, x, y)
         } else if (actionCode == MotionEvent.ACTION_POINTER_DOWN) {
             val index = event.actionIndex
             if (index != -1) {
@@ -91,6 +93,13 @@ class ControlInterpreter(
             val index = event.actionIndex
             val pid = event.getPointerId(index)
             quakeIf.touchEvent_if(2, pid, x, y)
+        } else if (actionCode == MotionEvent.ACTION_CANCEL) {
+            for (i in 0 until event.pointerCount) {
+                val x = event.getX(i) / screenWidth
+                val y = event.getY(i) / screenHeight
+                val pid = event.getPointerId(i)
+                quakeIf.touchEvent_if(2, pid, x, y)
+            }
         }
 
         return true
