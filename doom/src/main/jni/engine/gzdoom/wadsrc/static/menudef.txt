@@ -947,7 +947,7 @@ OptionMenu "VideoOptions" protected
 	Submenu "$DSPLYMNU_SWOPT",                 SWROptions
 	Submenu "$DSPLYMNU_IMAGEADJUST",           ImageAdjustMenu,       0, false, vid_shadersupport
 	StaticText " "
-	Submenu "$DSPLYMNU_VKOPT",                 VKOptions,             0, false, vid_preferbackend, 1, HideInv
+	//Submenu "$DSPLYMNU_VKOPT",                 VKOptions,             0, false, vid_preferbackend, 1, HideInv
 	Submenu "$GLMNU_TEXOPT",                   GLTextureGLOptions
 	Submenu "$GLMNU_DYNLIGHT",                 GLLightOptions
 	StaticText " "
@@ -1095,8 +1095,8 @@ OptionValue MaxFps
 
 OptionValue PreferBackend
 {
-	0, "$OPTVAL_OPENGL"
-	1, "$OPTVAL_VULKAN"
+	//0, "$OPTVAL_OPENGL"
+	//1, "$OPTVAL_VULKAN"
 	2, "$OPTVAL_OPENGLES"
 }
 

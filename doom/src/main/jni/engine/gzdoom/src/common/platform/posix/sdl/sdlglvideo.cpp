@@ -726,6 +726,7 @@ void I_SetWindowTitle(const char* caption)
 }
 
 #ifdef __ANDROID__ // From karin
+#ifdef HAVE_VULKAN
 extern "C" int  SDL_NewEGLSurfaceCreated();
 void VulkanCheckSurface()
 {
@@ -795,4 +796,5 @@ void VulkanCheckSurface()
 		return;
 	}
 }
+#endif
 #endif

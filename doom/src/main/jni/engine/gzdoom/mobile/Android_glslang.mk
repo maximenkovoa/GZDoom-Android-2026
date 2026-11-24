@@ -10,14 +10,6 @@ LOCAL_CFLAGS :=  -fexceptions -DUNIX -D_UNIX
 LOCAL_C_INCLUDES :=   $(LOCAL_PATH)/../ $(LOCAL_PATH)/include/ $(LOCAL_PATH)/include/zvulkan
 
 LOCAL_SRC_FILES =  	\
-src/vulkanbuilders.cpp \
-src/vulkandevice.cpp \
-src/vulkaninstance.cpp \
-src/vulkansurface.cpp \
-src/vulkanswapchain.cpp \
-src/vk_mem_alloc/vk_mem_alloc.cpp \
-src/vk_mem_alloc/vk_mem_alloc.natvis \
-src/volk/volk.c \
 src/glslang/glslang/MachineIndependent/propagateNoContraction.cpp \
 src/glslang/glslang/MachineIndependent/PoolAlloc.cpp \
 src/glslang/glslang/MachineIndependent/Intermediate.cpp \

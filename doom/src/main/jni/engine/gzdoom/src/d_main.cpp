@@ -1093,7 +1093,9 @@ static void End2DAndUpdate()
 }
 
 #ifdef __ANDROID__
+#ifdef HAVE_VULKAN
 void VulkanCheckSurface();
+#endif
 #endif
 //==========================================================================
 //
@@ -1122,7 +1124,9 @@ void D_Display ()
 	}
 
 #ifdef __ANDROID__
+#ifdef HAVE_VULKAN
     VulkanCheckSurface();
+#endif
 #endif
 
 	cycle_t cycles;
