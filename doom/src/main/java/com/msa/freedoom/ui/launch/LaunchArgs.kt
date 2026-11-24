@@ -28,4 +28,4 @@ fun buildModArgs(mods: List<ModEntry>): String = buildString {
  * [modArgs][extraArgs] back to back.
  */
 fun buildLaunchArgs(iwadArgs: String, modArgs: String, extraArgs: String, baseDir: String): String =
-    "$iwadArgs $modArgs$extraArgs -savedir $baseDir/gzdoom_saves +set fluid_patchset gzdoom.sf2 +set midi_dmxgus 0 "
+    "$iwadArgs $modArgs$extraArgs -savedir $baseDir/uzdoom_saves +set midi_dmxgus 0 "

@@ -140,6 +140,30 @@ public class SDLOpenTouch
 
         String userFiles = gamePath + "/user_files";
         new java.io.File(userFiles).mkdirs();
+
+        // Ensure SoundfontSearch.Directories includes the app's soundfonts folder
+        try {
+          java.io.File cfgDir = new java.io.File(userFiles + "/uzdoom/config");
+          cfgDir.mkdirs();
+          java.io.File iniFile = new java.io.File(cfgDir, "uzdoom.ini");
+          String sfPath = "Path=" + gamePath + "/soundfonts";
+          if (!iniFile.exists()) {
+            java.nio.file.Files.write(iniFile.toPath(), ("[SoundfontSearch.Directories]\n" + sfPath + "\n").getBytes());
+          } else {
+            String content = new String(java.nio.file.Files.readAllBytes(iniFile.toPath()));
+            if (!content.contains(sfPath)) {
+              if (content.contains("[SoundfontSearch.Directories]")) {
+                content = content.replace("[SoundfontSearch.Directories]", "[SoundfontSearch.Directories]\n" + sfPath);
+              } else {
+                content += "\n[SoundfontSearch.Directories]\n" + sfPath + "\n";
+              }
+              java.nio.file.Files.write(iniFile.toPath(), content.getBytes());
+            }
+          }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to update SoundfontSearch.Directories in uzdoom.ini", e);
+        }
+
         String logFilename = userFiles + "/gzdoom_log.txt";
         String tmpFiles = activity.getCacheDir().getAbsolutePath();
         String sourceDir = activity.getApplicationContext().getApplicationInfo().sourceDir;

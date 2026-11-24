@@ -178,7 +178,6 @@ class LaunchState(private val activity: Activity) {
                 Utils.copyAsset(activity, "extras_gore.pk3", base)
                 // fluid_patchset gzdoom.sf2 resolves against the game dir; also
                 // expose it in soundfonts/ for the engine's sound-font menu.
-                Utils.copyAsset(activity, "gzdoom.sf2", base)
                 Utils.copyAsset(activity, "gzdoom.sf2", "$base/soundfonts")
             }
         } catch (e: IOException) {

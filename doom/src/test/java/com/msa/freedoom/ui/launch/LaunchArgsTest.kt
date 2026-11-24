@@ -11,12 +11,10 @@ class LaunchArgsTest {
 
     /** The exact string the legacy fragment produced: gameArgs + " " + editText + suffix. */
     private fun legacyArgs(gameArgs: String, editText: String, base: String): String {
-        val args = "$gameArgs $editText"
-        val saveDir = " -savedir $base/gzdoom_saves"
-        return args + saveDir + " +set fluid_patchset " + "gzdoom.sf2" + " +set midi_dmxgus 0 "
+        return "$gameArgs $editText -savedir $base/uzdoom_saves +set midi_dmxgus 0 "
     }
 
-    private val base = "/storage/emulated/0/Android/data/com.msa.freedoom/files/Freedoom/config"
+    private val base = "/storage/emulated/0/Android/data/com.msa.freedoom/files/Freedoom"
 
     @Test
     fun `iwad only`() {

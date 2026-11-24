@@ -769,7 +769,7 @@ class OptionMenu : Menu
 			break;
 
 		case MKEY_Enter:
-			if (mDesc.mSelectedItem >= 0 && mDesc.mItems[mDesc.mSelectedItem].Activate())
+      if (mDesc.mSelectedItem >= 0 && mDesc.mSelectedItem < mDesc.mItems.Size() && mDesc.mItems[mDesc.mSelectedItem].Activate())
 			{
 				return true;
 			}
@@ -778,8 +778,10 @@ class OptionMenu : Menu
 				// fall through to default
 			}
 		default:
-			if (mDesc.mSelectedItem >= 0 &&
-				mDesc.mItems[mDesc.mSelectedItem].MenuEvent(mkey, fromcontroller)) return true;
+      if (
+        mDesc.mSelectedItem >= 0 && mDesc.mSelectedItem < mDesc.mItems.Size()
+        && mDesc.mItems[mDesc.mSelectedItem].MenuEvent(mkey, fromcontroller)
+      ) return true;
 			return Super.MenuEvent(mkey, fromcontroller);
 		}
 

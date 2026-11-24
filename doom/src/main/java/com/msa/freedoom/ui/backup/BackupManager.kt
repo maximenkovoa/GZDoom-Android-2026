@@ -21,7 +21,7 @@ object BackupManager {
     private const val PREFS_ENTRY = "prefs.json"
     const val DEFAULT_FILENAME = "freedoom-backup.zip"
 
-    private fun savesDir(): File = File(AppSettings.getQuakeFullDir(), "gzdoom_saves")
+    private fun savesDir(): File = File(AppSettings.getQuakeFullDir(), "uzdoom_saves")
 
     /** Writes a backup zip to [out]. Returns the number of save files included. */
     fun backup(ctx: Context, out: Uri): Int {

@@ -63,7 +63,7 @@ object AppSettings {
     }
 
     @JvmStatic
-    fun getQuakeFullDir(): String = "$freedoomBaseDir/config"
+    fun getQuakeFullDir(): String = "$freedoomBaseDir"
 
     @JvmStatic
     fun createDirectories(ctx: Context) {
@@ -75,8 +75,8 @@ object AppSettings {
 
         File(getQuakeFullDir()).mkdirs()
 
-        // create folder gzdoom_dev where we store a modified ini
-        File(getQuakeFullDir() + "/gzdoom_dev").mkdirs()
+        // create folder uzdoom where we store a modified ini
+        File(getQuakeFullDir() + "/uzdoom").mkdirs()
 
         // create a folder for user wads
         File(getQuakeFullDir() + "/wads").mkdirs()

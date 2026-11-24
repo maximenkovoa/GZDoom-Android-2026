@@ -46,7 +46,6 @@ suspend fun launchProject(activity: Activity, project: MapProject, result: Gener
         Utils.copyAsset(activity, "game_widescreen_gfx.pk3", base)
         Utils.copyAsset(activity, "lights.pk3", base)
         Utils.copyAsset(activity, "brightmaps.pk3", base)
-        Utils.copyAsset(activity, "gzdoom.sf2", base)
         Utils.copyAsset(activity, "gzdoom.sf2", "$base/soundfonts")
     }
 
