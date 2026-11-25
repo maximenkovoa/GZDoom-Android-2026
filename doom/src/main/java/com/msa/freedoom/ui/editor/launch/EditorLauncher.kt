@@ -31,7 +31,7 @@ suspend fun ensureIwadUnpacked(activity: Activity, iwadFile: String) = withConte
     AppSettings.createDirectories(activity)
     val iwad = File(AppSettings.getQuakeFullDir(), iwadFile)
     if (!iwad.exists() && iwadFile.lowercase().startsWith("freedoom")) {
-        Utils.copyFreedoomFilesToSD(activity)
+        //Utils.copyFreedoomFilesToSD(activity)
     }
 }
 
@@ -39,14 +39,7 @@ suspend fun launchProject(activity: Activity, project: MapProject, result: Gener
     val base = AppSettings.getQuakeFullDir()
     ensureIwadUnpacked(activity, project.iwadFile)
     withContext(Dispatchers.IO) {
-        // UZDoom 5.0 (__MOBILE__) loads its base data from ./res relative to the
-        // game dir; keep this in sync with LaunchState.launchGame().
-        Utils.copyAsset(activity, "uzdoom.pk3", "$base/res")
-        Utils.copyAsset(activity, "uzdoom_game_support.pk3", "$base/res")
-        Utils.copyAsset(activity, "game_widescreen_gfx.pk3", base)
-        Utils.copyAsset(activity, "lights.pk3", base)
-        Utils.copyAsset(activity, "brightmaps.pk3", base)
-        Utils.copyAsset(activity, "gzdoom.sf2", "$base/soundfonts")
+        Utils.copyEngineFilesToSD(activity)
     }
 
     val iwadArgs = WadEntry(project.iwadFile, 0L).iwadArgs

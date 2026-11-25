@@ -35,8 +35,6 @@ class LaunchState(private val activity: Activity) {
     val argsHistory = mutableStateListOf<String>()
     var isPreparing by mutableStateOf(false)
         private set
-    var isLaunching by mutableStateOf(false)
-        private set
     var initialized by mutableStateOf(false)
         private set
 
@@ -58,7 +56,8 @@ class LaunchState(private val activity: Activity) {
         try {
             withContext(Dispatchers.IO) {
                 AppSettings.createDirectories(activity)
-                Utils.copyFreedoomFilesToSD(activity)
+                if (firstRun) Utils.copyEngineFilesToSD(activity)
+                if (firstRun) Utils.copyFreedoomFilesToSD(activity)
                 if (firstRun) Utils.copyAsset(activity, "firstrun", baseDir)
             }
         } catch (e: IOException) {
@@ -157,35 +156,6 @@ class LaunchState(private val activity: Activity) {
     /** Ports LaunchFragmentGZdoom.startGame() — the Intent contract must stay identical. */
     suspend fun launchGame() {
         val game = selectedGame ?: return
-        if (isLaunching) return
-        val base = baseDir
-
-        isLaunching = true
-        try {
-            withContext(Dispatchers.IO) {
-                // UZDoom 5.0 (__MOBILE__) loads its base data from ./res relative to
-                // the game dir: res/uzdoom.pk3 (BASEWAD) + res/uzdoom_game_support.pk3
-                // (OPTIONALWAD, also carries IWADINFO). See engine src/version.h.
-                Utils.copyAsset(activity, "uzdoom.pk3", "$base/res")
-                Utils.copyAsset(activity, "uzdoom_game_support.pk3", "$base/res")
-                Utils.copyAsset(activity, "game_widescreen_gfx.pk3", base)
-                // Autoload extras are searched via $PROGDIR (= the game dir).
-                Utils.copyAsset(activity, "lights.pk3", base)
-                Utils.copyAsset(activity, "brightmaps.pk3", base)
-                // Optional blood/particles add-on. The engine only autoloads the three
-                // hardcoded pk3 names above, so this one is inert unless we pass it with
-                // -file (done below when the toggle is on).
-                Utils.copyAsset(activity, "extras_gore.pk3", base)
-                // fluid_patchset gzdoom.sf2 resolves against the game dir; also
-                // expose it in soundfonts/ for the engine's sound-font menu.
-                Utils.copyAsset(activity, "gzdoom.sf2", "$base/soundfonts")
-            }
-        } catch (e: IOException) {
-            errorMessage = activity.getString(R.string.launch_failed, e.message ?: e.toString())
-            isLaunching = false
-            return
-        }
-        isLaunching = false
 
         val trimmedArgs = extraArgs.trim()
         if (trimmedArgs.isNotEmpty()) {

@@ -41,21 +41,36 @@ object Utils {
         val fullWadDir = "$fullBaseDir/wads"
 
         // Freedoom additions
-        copyAsset(responsibleActivity, "freedoom1.wad", fullBaseDir)
-        // Freedoom licence and credits
-        copyAsset(responsibleActivity, "COPYING.txt", fullBaseDir)
-        copyAsset(responsibleActivity, "CREDITS.txt", fullBaseDir)
-
-        // copy over gzdoom mod/package files (selectable as add-on chips;
-        // GZDoom 4.15 also autoloads the copies placed in the base dir).
-        val fullModDir = "$fullBaseDir/mods"
-
-        if (!File("$fullModDir/brightmaps.pk3").exists()) {
-            copyAsset(responsibleActivity, "brightmaps.pk3", fullModDir)
+        if (!File("$fullBaseDir/freedoom1.wad").exists()) {
+            copyAsset(responsibleActivity, "freedoom1.wad", fullBaseDir)
+            copyAsset(responsibleActivity, "COPYING.txt", fullBaseDir)
+            copyAsset(responsibleActivity, "CREDITS.txt", fullBaseDir)
         }
-        if (!File("$fullModDir/lights.pk3").exists()) {
-            copyAsset(responsibleActivity, "lights.pk3", fullModDir)
-        }
+    }
+
+    @JvmStatic
+    @Throws(IOException::class)
+    fun copyEngineFilesToSD(responsibleActivity: Activity) {
+        val fullBaseDir = AppSettings.getQuakeFullDir()
+        val fullUserConfDir = "$fullBaseDir/user_files/uzdoom/config"
+
+        // UZDoom 5.0 (__MOBILE__) loads its base data from ./res relative to
+        // the game dir: res/uzdoom.pk3 (BASEWAD) + res/uzdoom_game_support.pk3
+        // (OPTIONALWAD, also carries IWADINFO). See engine src/version.h.
+        if (!File("$fullBaseDir/res/uzdoom.pk3").exists()) copyAsset(responsibleActivity, "uzdoom.pk3", "$fullBaseDir/res")
+        if (!File("$fullBaseDir/res/uzdoom_game_support.pk3").exists()) copyAsset(responsibleActivity, "uzdoom_game_support.pk3", "$fullBaseDir/res")
+        if (!File("$fullBaseDir/game_widescreen_gfx.pk3").exists()) copyAsset(responsibleActivity, "game_widescreen_gfx.pk3", fullBaseDir)
+        // Autoload extras are searched via $PROGDIR (= the game dir).
+        if (!File("$fullBaseDir/lights.pk3").exists()) copyAsset(responsibleActivity, "lights.pk3", fullBaseDir)
+        if (!File("$fullBaseDir/brightmaps.pk3").exists()) copyAsset(responsibleActivity, "brightmaps.pk3", fullBaseDir)
+        // Optional blood/particles add-on. The engine only autoloads the three
+        // hardcoded pk3 names above, so this one is inert unless we pass it with
+        // -file (done below when the toggle is on).
+        if (!File("$fullBaseDir/extras_gore.pk3").exists()) copyAsset(responsibleActivity, "extras_gore.pk3", fullBaseDir)
+        // fluid_patchset gzdoom.sf2 resolves against the game dir; also
+        // expose it in soundfonts/ for the engine's sound-font menu.
+        if (!File("$fullBaseDir/soundfonts/gzdoom.sf2").exists()) copyAsset(responsibleActivity, "gzdoom.sf2", "$fullBaseDir/soundfonts")
+        if (!File("$fullUserConfDir/uzdoom.ini").exists()) copyAsset(responsibleActivity, "uzdoom.ini", fullUserConfDir)
     }
 
     @Throws(IOException::class)

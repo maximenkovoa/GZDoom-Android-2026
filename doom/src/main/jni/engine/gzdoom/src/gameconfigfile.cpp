@@ -264,7 +264,7 @@ FGameConfigFile::FGameConfigFile ()
 		}
 	}
 
-
+/*
 #ifdef __ANDROID__
     SetSection("SoundfontSearch.Directories");
     DeleteCurrentSection(); // This is to stop is spamming the ini file with new Paths each time it saves
@@ -280,6 +280,7 @@ FGameConfigFile::FGameConfigFile ()
         SetValueForKey("Path", path.c_str(), true);
     }
 #endif
+*/
 
 	// Add some self-documentation.
 	SetSectionNote("IWADSearch.Directories",

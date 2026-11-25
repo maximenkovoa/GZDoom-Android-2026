@@ -464,7 +464,7 @@ class OptionMenu : Menu
 
 	int MenuMoveCursor(int items)
 	{
-		if (items == 0) // trivial case
+		if (items == 0 || mDesc.mItems.Size() == 0) // trivial case
 		{
 			return 0;
 		}
