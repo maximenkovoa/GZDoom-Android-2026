@@ -143,7 +143,7 @@ fun OptionsScreen(modifier: Modifier = Modifier) {
                 }
             }
         }
-
+/*
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Text(
@@ -155,7 +155,7 @@ fun OptionsScreen(modifier: Modifier = Modifier) {
                 ResolutionDividerDropdown()
             }
         }
-
+*/
         EngineOptionsCard()
 
         Card(Modifier.fillMaxWidth()) {

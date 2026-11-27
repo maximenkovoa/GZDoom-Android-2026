@@ -177,8 +177,8 @@ class LaunchState(private val activity: Activity) {
         // Optional in-launcher engine settings (FOV, gamma, crosshair, volumes…) rendered
         // as +set/+fov args. Composed here (not in buildLaunchArgs) for the same reason as
         // goreArgs. Placed before extraArgs so a user-typed +set on the args field still wins.
-        val engineArgs = if (AppSettings.getBoolOption(activity, EngineOptions.KEY_ENABLED, false))
-            buildEngineCvarArgs(EngineOptions.fromPrefs(activity)) else ""
+        val engineArgs = //if (AppSettings.getBoolOption(activity, EngineOptions.KEY_ENABLED, false))
+            buildEngineCvarArgs(EngineOptions.fromPrefs(activity)) //else ""
 
         // Begin a play session for the local stats screen; closed when the user returns
         // to the launcher (see MainScreen's PLAY-route effect).

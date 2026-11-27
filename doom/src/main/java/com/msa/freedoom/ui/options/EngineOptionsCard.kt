@@ -44,9 +44,28 @@ import com.msa.freedoom.R
 fun EngineOptionsCard(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var enabled by remember {
-        mutableStateOf(AppSettings.getBoolOption(context, EngineOptions.KEY_ENABLED, false))
+        mutableStateOf(AppSettings.getBoolOption(context, EngineOptions.KEY_ENABLED, true))
     }
 
+    Card(modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                stringResource(R.string.engine_options_header),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.tertiary,
+            )
+            Spacer(Modifier.height(12.dp))
+            var fpsHud by remember {
+                mutableStateOf(AppSettings.getBoolOption(context, "eo_fps", EngineOptions.DEFAULT.fpsHud))
+            }
+            ToggleRow(
+                label = stringResource(R.string.engine_opt_fps_hud),
+                checked = fpsHud,
+                onChange = { fpsHud = it; EngineOptions.saveFpsHud(context, it) },
+            )
+        }
+    }
+/*
     Card(modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(
@@ -182,6 +201,7 @@ fun EngineOptionsCard(modifier: Modifier = Modifier) {
             }
         }
     }
+*/
 }
 
 @Composable

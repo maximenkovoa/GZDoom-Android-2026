@@ -104,6 +104,7 @@ private fun b(v: Boolean): String = if (v) "1" else "0"
  * extra args (appended after this) still override the launcher.
  */
 fun buildEngineCvarArgs(opts: EngineOptions): String = buildString {
+/*
     append("+fov ").append(opts.fov).append(' ')
     append("+set vid_gamma ").append(f2(opts.gamma)).append(' ')
     append("+set crosshair ").append(opts.crosshair).append(' ')
@@ -113,5 +114,6 @@ fun buildEngineCvarArgs(opts: EngineOptions): String = buildString {
     append("+set snd_mastervolume ").append(f2(opts.masterVolume)).append(' ')
     append("+set snd_musicvolume ").append(f2(opts.musicVolume)).append(' ')
     append("+set snd_sfxvolume ").append(f2(opts.sfxVolume)).append(' ')
+*/
     append("+set vid_fps ").append(b(opts.fpsHud)).append(' ')
 }
