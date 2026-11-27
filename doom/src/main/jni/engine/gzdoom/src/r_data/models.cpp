@@ -795,11 +795,18 @@ void ParseModelDefLump(int Lump)
 			smf.xscale=smf.yscale=smf.zscale=1.f;
 
 			auto type = PClass::FindClass(sc.String);
-			if (!type || type->Defaults == nullptr)
-			{
-				sc.ScriptError("MODELDEF: Unknown actor type '%s'\n", sc.String);
+			if (!type || type->Defaults == nullptr) {
+				sc.ScriptMessage("MODELDEF: Unknown actor type '%s' (skipping)\n", sc.String);
+				sc.MustGetStringName("{");
+				int braceDepth = 1;
+				while (braceDepth > 0 && sc.GetString()) {
+					if (sc.Compare("{")) braceDepth++;
+					else if (sc.Compare("}")) braceDepth--;
+				}
+				continue;
 			}
 			smf.type = type;
+
 			FScanner::SavedPos scPos = sc.SavePos();
 			sc.MustGetStringName("{");
 			while (!sc.CheckString("}"))
