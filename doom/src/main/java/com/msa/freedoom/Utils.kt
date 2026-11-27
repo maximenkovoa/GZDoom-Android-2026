@@ -127,8 +127,36 @@ object Utils {
     }
 
     @JvmStatic
-    fun createArgs(appArgs: String): Array<String> =
-        appArgs.split(" ").filter { it.isNotEmpty() }.toTypedArray()
+    fun createArgs(appArgs: String): Array<String> {
+        val result = ArrayList<String>()
+        val current = StringBuilder()
+        var inQuotes = false
+        var hasToken = false
+
+        for (c in appArgs) {
+            when {
+                c == '"' -> {
+                    inQuotes = !inQuotes
+                    hasToken = true
+                }
+                c.isWhitespace() && !inQuotes -> {
+                    if (hasToken) {
+                        result.add(current.toString())
+                        current.setLength(0)
+                        hasToken = false
+                    }
+                }
+                else -> {
+                    current.append(c)
+                    hasToken = true
+                }
+            }
+        }
+        if (hasToken) {
+            result.add(current.toString())
+        }
+        return result.toTypedArray()
+    }
 
     @JvmStatic
     fun loadArgs(ctx: Context, args: ArrayList<String>) {

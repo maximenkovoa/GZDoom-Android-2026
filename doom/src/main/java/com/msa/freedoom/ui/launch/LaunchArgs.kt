@@ -1,8 +1,11 @@
 package com.msa.freedoom.ui.launch
 
+private fun quoteIfNeeded(path: String): String =
+    if (path.contains(' ') && !path.startsWith('"')) "\"$path\"" else path
+
 /** A selectable IWAD in the game-data directory. */
 data class WadEntry(val file: String, val sizeBytes: Long) {
-    val iwadArgs: String get() = "-iwad $file"
+    val iwadArgs: String get() = "-iwad ${quoteIfNeeded(file)}"
 }
 
 /** An add-on selected in the mod picker, as a path relative to the game-data directory. */
@@ -17,7 +20,7 @@ data class ModEntry(val relPath: String) {
 fun buildModArgs(mods: List<ModEntry>): String = buildString {
     for (mod in mods) {
         append(if (mod.isPatch) "-deh " else "-file ")
-        append(mod.relPath)
+        append(quoteIfNeeded(mod.relPath))
         append(" ")
     }
 }
@@ -28,4 +31,4 @@ fun buildModArgs(mods: List<ModEntry>): String = buildString {
  * [modArgs][extraArgs] back to back.
  */
 fun buildLaunchArgs(iwadArgs: String, modArgs: String, extraArgs: String, baseDir: String): String =
-    "$iwadArgs $modArgs$extraArgs -savedir $baseDir/uzdoom_saves +set midi_dmxgus 0 "
+    "$iwadArgs $modArgs$extraArgs -savedir ${quoteIfNeeded("$baseDir/uzdoom_saves")} +set midi_dmxgus 0 "
