@@ -35,6 +35,8 @@ class LaunchState(private val activity: Activity) {
     val argsHistory = mutableStateListOf<String>()
     var isPreparing by mutableStateOf(false)
         private set
+    var isLaunching by mutableStateOf(false)
+        private set
     var initialized by mutableStateOf(false)
         private set
 
@@ -188,9 +190,9 @@ class LaunchState(private val activity: Activity) {
             action = Intent.ACTION_MAIN
             addCategory(Intent.CATEGORY_LAUNCHER)
             putExtra("res_div", AppSettings.getIntOption(activity, "gzdoom_res_div", 1))
-            putExtra("game_path", base)
+            putExtra("game_path", baseDir)
             putExtra("game", "com.msa.freedoom")
-            putExtra("args", buildLaunchArgs(game.iwadArgs, buildModArgs(selectedMods) + goreArgs + engineArgs, extraArgs, base))
+            putExtra("args", buildLaunchArgs(game.iwadArgs, buildModArgs(selectedMods) + goreArgs + engineArgs, extraArgs, baseDir))
         }
         activity.startActivity(intent)
     }

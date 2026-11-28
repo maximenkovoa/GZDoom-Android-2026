@@ -161,11 +161,18 @@ namespace Priv
 		// TODO control better when updateDisplayInfo fails
 		SDL_Rect* bounds = &displayBounds[vid_adapter % numberOfDisplays];
 
-		if (win_w <= 0 || win_h <= 0)
-		{
+#ifdef __MOBILE__
+		win_w = bounds->w;
+		win_h = bounds->h;
+#else
+		if (win_w <= 0 || win_h <= 0) {
 			win_w = bounds->w * 8 / 10;
 			win_h = bounds->h * 8 / 10;
+		} else {
+			win_w = min<int>(*win_w, bounds->w);
+			win_h = min<int>(*win_h, bounds->h);
 		}
+#endif
 
 		int xWindowPos = (win_x <= 0) ? SDL_WINDOWPOS_CENTERED_DISPLAY(vid_adapter) : win_x;
 		int yWindowPos = (win_y <= 0) ? SDL_WINDOWPOS_CENTERED_DISPLAY(vid_adapter) : win_y;
@@ -267,11 +274,19 @@ CUSTOM_CVAR(Int, vid_adapter, 0, CVAR_ARCHIVE | CVAR_GLOBALCONFIG | CVAR_NOINITC
 		// TODO control better when updateDisplayInfo fails
 		SDL_Rect* bounds = &Priv::displayBounds[vid_adapter % Priv::numberOfDisplays];
 
-		if (win_w <= 0 || win_h <= 0)
-		{
+#ifdef __MOBILE__
+		win_w = bounds->w;
+		win_h = bounds->h;
+#else
+		if (win_w <= 0 || win_h <= 0) {
 			win_w = bounds->w * 8 / 10;
 			win_h = bounds->h * 8 / 10;
+		} else {
+			win_w = min<int>(*win_w, bounds->w);
+			win_h = min<int>(*win_h, bounds->h);
 		}
+#endif
+
 		// Forces to set to the ini this vars to -1, so +vid_adapter keeps working the next time that the game it's launched
 		win_x = -1;
 		win_y = -1;

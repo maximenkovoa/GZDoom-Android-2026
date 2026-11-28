@@ -756,6 +756,9 @@ struct PresentUniforms
 	int WindowPositionParity; // top-of-window might not be top-of-screen
 	FVector2 Scale;
 	FVector2 Offset;
+	FVector2 InvInputSize;
+	int UseAntialiasing;
+	float PseudoHdr;
 	int HdrMode;
 
 	static std::vector<UniformFieldDesc> Desc()
@@ -772,6 +775,9 @@ struct PresentUniforms
 			{ "WindowPositionParity", UniformType::Int, offsetof(PresentUniforms, WindowPositionParity) },
 			{ "UVScale", UniformType::Vec2, offsetof(PresentUniforms, Scale) },
 			{ "UVOffset", UniformType::Vec2, offsetof(PresentUniforms, Offset) },
+			{ "InvInputSize", UniformType::Vec2, offsetof(PresentUniforms, InvInputSize) },
+			{ "UseAntialiasing", UniformType::Int, offsetof(PresentUniforms, UseAntialiasing) },
+			{ "PseudoHdr", UniformType::Float, offsetof(PresentUniforms, PseudoHdr) },
 			{ "HdrMode", UniformType::Int, offsetof(PresentUniforms, HdrMode) }
 		};
 	}

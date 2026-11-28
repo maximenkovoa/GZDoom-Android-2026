@@ -63,6 +63,7 @@ EXTERN_CVAR(Float, hud_scalefactor)
 EXTERN_CVAR(Float, vid_gamma)
 EXTERN_CVAR(Float, vid_contrast)
 EXTERN_CVAR(Float, vid_saturation)
+EXTERN_CVAR(Float, vid_pseudohdr)
 EXTERN_CVAR(Float, vid_fixgamma)
 EXTERN_CVAR(Float, vid_blackpoint)
 EXTERN_CVAR(Float, vid_whitepoint)
@@ -632,6 +633,8 @@ CCMD(vid_reset2defaults)
 {
 	vid_contrast->ResetToDefault();
 	vid_saturation->ResetToDefault();
+	r_extralight->ResetToDefault();
+	vid_pseudohdr->ResetToDefault();
 	vid_fixgamma->ResetToDefault();
 	vid_blackpoint->ResetToDefault();
 	vid_whitepoint->ResetToDefault();

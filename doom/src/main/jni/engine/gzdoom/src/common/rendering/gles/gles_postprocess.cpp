@@ -38,7 +38,7 @@
 #include "v_draw.h"
 
 extern bool vid_hdr_active;
-
+EXTERN_CVAR(Int, gl_multisample)
 
 namespace OpenGLESRenderer
 {
@@ -128,6 +128,7 @@ void FGLRenderer::DrawPresentTexture(const IntRect &box, bool applyGamma)
 	}
 
 	mPresentShader->Bind();
+/*
 	if (!applyGamma || framebuffer->IsHWGammaActive())
 	{
 		mPresentShader->Uniforms->InvGamma = 1.0f;
@@ -138,13 +139,14 @@ void FGLRenderer::DrawPresentTexture(const IntRect &box, bool applyGamma)
 	}
 	else
 	{
+*/
 		mPresentShader->Uniforms->InvGamma = 1.0f / clamp<float>(vid_gamma, 0.1f, 4.f);
-		mPresentShader->Uniforms->Contrast = clamp<float>(vid_contrast, 0.1f, 3.f);
+		mPresentShader->Uniforms->Contrast = 1.0f + (clamp<float>(vid_contrast, 0.1f, 3.f) - 1.0f) * 0.25f;
 		mPresentShader->Uniforms->Saturation = clamp<float>(vid_saturation, -15.0f, 15.f);
 		mPresentShader->Uniforms->BlackPoint = clamp<float>(vid_i_blackpoint, 0.f, 1.f);
 		mPresentShader->Uniforms->WhitePoint = clamp<float>(vid_i_whitepoint, 0.f, 5.f);
 		mPresentShader->Uniforms->GrayFormula = static_cast<int>(gl_satformula);
-	}
+//	}
 	if (vid_hdr_active && framebuffer->IsFullscreen())
 	{
 		// Full screen exclusive mode treats a rgba16f frame buffer as linear.
@@ -158,8 +160,11 @@ void FGLRenderer::DrawPresentTexture(const IntRect &box, bool applyGamma)
 		mPresentShader->Uniforms->ColorScale = (gl_dither_bpc == -1) ? 255.0f : (float)((1 << gl_dither_bpc) - 1);
 	}
 
+	mPresentShader->Uniforms->InvInputSize = { 1.0f / screen->mScreenViewport.width, 1.0f / screen->mScreenViewport.height };
 	mPresentShader->Uniforms->Scale = { screen->mScreenViewport.width / (float)mBuffers->GetWidth(), screen->mScreenViewport.height / (float)mBuffers->GetHeight() };
 	mPresentShader->Uniforms->Offset = { 0.0f, 0.0f };
+	mPresentShader->Uniforms->UseAntialiasing = (gl_multisample >= 2) ? 1 : 0;
+	mPresentShader->Uniforms->PseudoHdr = clamp<float>(vid_pseudohdr, 0.0f, 2.0f);
 	mPresentShader->Uniforms.SetData();
 
 	for (size_t n = 0; n < mPresentShader->Uniforms.mFields.size(); n++)

@@ -945,7 +945,7 @@ OptionMenu "VideoOptions" protected
 
 	Submenu "$DSPLYMNU_GLOPT",                 OpenGLOptions
 	Submenu "$DSPLYMNU_SWOPT",                 SWROptions
-	Submenu "$DSPLYMNU_IMAGEADJUST",           ImageAdjustMenu,       0, false, vid_shadersupport
+	Submenu "$DSPLYMNU_IMAGEADJUST",           ImageAdjustMenu
 	StaticText " "
 	//Submenu "$DSPLYMNU_VKOPT",                 VKOptions,             0, false, vid_preferbackend, 1, HideInv
 	Submenu "$GLMNU_TEXOPT",                   GLTextureGLOptions
@@ -1030,6 +1030,9 @@ OptionMenu "ImageAdjustMenu" protected
 	Tooltip "$DSPLYMNU_TOOLTIP_BRIGHTNESS"
 	Slider "$DSPLYMNU_CONTRAST",               vid_contrast,      0.5, 2.0, 0.01, 2
 	Tooltip "$DSPLYMNU_TOOLTIP_CONTRAST"
+	Slider "$ACCMNU_LIGHT_EXTRA", "r_extralight", -64, 128, 1, 0
+	Tooltip "$ACCMNU_TOOLTIP_LIGHT_EXTRA"
+	Slider "HDR",                              vid_pseudohdr,      0.0, 2.0, 0.05, 2
 	Slider "$DSPLYMNU_SATURATION",             vid_saturation,    -1.0, 2.0, 0.01, 2
 	Tooltip "$DSPLYMNU_TOOLTIP_SATURATION"
 	StaticText ""

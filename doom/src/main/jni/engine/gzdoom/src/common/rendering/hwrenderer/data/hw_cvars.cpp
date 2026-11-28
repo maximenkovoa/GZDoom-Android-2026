@@ -83,6 +83,12 @@ CUSTOM_CVARD(Float, vid_saturation, 1.f, CVAR_ARCHIVE | CVAR_GLOBALCONFIG, "adju
 	else if (self > 3) self = 3;
 }
 
+CUSTOM_CVARD(Float, vid_pseudohdr, 1.f, CVAR_ARCHIVE | CVAR_GLOBALCONFIG, "adjusts pseudo-HDR strength in GLES renderer")
+{
+	if (self < 0) self = 0;
+	else if (self > 2) self = 2;
+}
+
 #ifndef BW_GAP
 #define BW_GAP 0.2
 #endif

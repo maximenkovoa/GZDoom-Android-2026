@@ -22,17 +22,17 @@ data class EngineOptions(
     /** Display gamma/brightness (`vid_gamma`); 1.0 = engine default. */
     val gamma: Float = 1.0f,
     /** Crosshair style index (`crosshair`); 0 = none/off. */
-    val crosshair: Int = 0,
+    val crosshair: Int = 1,
     /** Dynamic lights (`gl_lights`). */
     val dynamicLights: Boolean = true,
     /** Vertical sync (`vid_vsync`). */
     val vsync: Boolean = true,
     /** Rotating autosave slot count (`autosavecount`). */
-    val autosaveCount: Int = 4,
+    val autosaveCount: Int = 3,
     /** Master volume (`snd_mastervolume`), 0.0–1.0. */
     val masterVolume: Float = 1.0f,
     /** Music volume (`snd_musicvolume`), 0.0–1.0. */
-    val musicVolume: Float = 1.0f,
+    val musicVolume: Float = 0.8f,
     /** Sound-effects volume (`snd_sfxvolume`), 0.0–1.0. */
     val sfxVolume: Float = 1.0f,
     /** On-screen FPS / frametime counter (`vid_fps`). */
