@@ -37,6 +37,7 @@
 #include "flatvertices.h"
 #include "hw_lightbuffer.h"
 #include "hw_renderstate.h"
+#include "hw_viewpointbuffer.h"
 
 #include "vm.h"
 
@@ -115,14 +116,37 @@ void HWDrawInfo::DrawPlayerSprites(bool hudModelStep, FRenderState &state)
 {
 	auto oldlightmode = lightmode;
 	if (!hudModelStep && isSoftwareLighting(oldlightmode)) SetFallbackLightMode();	// Software lighting cannot handle 2D content.
-	for (auto &hudsprite : hudsprites)
-	{
-		if ((!!hudsprite.mframe) == hudModelStep)
-			DrawPSprite(&hudsprite, state);
+	if (hudModelStep) {
+		// Сохраняем текущие uniform-данные и подменяем матрицу проекции на фиксированную,
+		// чтобы 3D-модели оружия не растягивались на широких экранах и не срезались.
+		HWViewpointUniforms hudVP = VPUniforms;
+		hudVP.mProjectionMatrix.loadIdentity();
+		// Эталонное соотношение сторон и вертикальный FOV для моделей оружия.
+		// Если модели делались под стандартный 16:9 и FOV 90 (вертикальный ~59°),
+		// оставляем эти значения. Для 4:3 можно поставить 4.0f / 3.0f.
+		const float fixedAspect = 16.0f / 9.0f;
+		const float fixedVertFov = 59.0f; // Соответствует горизонтальному FOV ~90° на 16:9
+		const float zNear = 1.0f;         // Уменьшенный zNear убирает срезы ближней геометрии
+		const float zFar = 65536.0f;
+		hudVP.mProjectionMatrix.perspective(fixedVertFov, fixedAspect, zNear, zFar);
+		//const float aspect = 16.0f / 9.0f;
+		//const float orthoScale = 15.0f; // Подбирается вручную под размер модели
+		//hudVP.mProjectionMatrix.ortho(-orthoScale * aspect, orthoScale * aspect, -orthoScale, orthoScale, -100.0f, 100.0f);
+		screen->mViewpoints->SetViewpoint(state, &hudVP);
 	}
+
+	for (auto &hudsprite : hudsprites) {
+		if ((!!hudsprite.mframe) == hudModelStep) {
+			DrawPSprite(&hudsprite, state);
+		}
+	}
+	if (hudModelStep) {
+		// Возвращаем исходную матрицу проекции сцены
+		screen->mViewpoints->Bind(state, vpIndex);
+	}
+
 	lightmode = oldlightmode;
 }
-
 
 //==========================================================================
 //
