@@ -461,9 +461,46 @@ bool HWSprite::CalculateVertices(HWDrawInfo* di, FVector3* v, DVector3* vp)
 	// [Nash] check for special sprite drawing modes
 	if (drawWithXYBillboard || drawBillboardFacingCamera || isWallSprite)
 	{
+		const bool useFloorPivot = (actor != nullptr && !isWallSprite && !doRoll);
+		const float pivotX = useFloorPivot ? x : center.X;
+		const float pivotY = useFloorPivot ? y : center.Y;
+		const float pivotZ = useFloorPivot ? z : center.Z;
+		//float pitchDeg = HWAngles.Pitch.Degrees();
+
+		const float pitchDeg = useFloorPivot
+			? clamp<float>(HWAngles.Pitch.Degrees() * (0.3889f/*35.0f / 90.0f*/), -20.0f, 35.0f)
+			: HWAngles.Pitch.Degrees();
+/*
+		Алгоритм: Чтобы 3d плоские спрайты не превратились в полоски при высоком взгляде на них сверху или снизу,
+		делается вертикальный поворот спрайтов на угол вертикального поворота камеры игрока, но ограниченного
+		диапазона от -35 до 35 градусов (90 градусов поворота камеры игрока = 35 градусов поворота спрайта),
+		относительно основания спрайтов. Дополнительно делается плавная поправка: когда игрок смотрит вверх,
+		то спрайт должен поворачиваться настолько меньше, насколько камера игрока находятся выше основания спрайта;
+		а когда вниз – настолько меньше, насколько камера игрока ниже высоты спрайта.
+
+		if (useFloorPivot) {
+			float heightFactor = 0.0f;
+			if (di->Viewpoint.camera != nullptr && di->Viewpoint.camera->Height > 0.0f) {
+				const float zLow = min(z1, z2);
+				const float zHigh = max(z1, z2);
+				const float playerHeight = (float)di->Viewpoint.camera->Height;
+				//const float playerLowZ = (float)di->Viewpoint.ActorPos.Z;
+				const float playerCamZ = (float)vp->Z;
+				const float invTransitionZone = 1.0f / (playerHeight * 0.5f);
+				if (pitchDeg < 0.0f) {
+					// Взгляд вверх: плавный наклон только если основание спрайта выше камеры игрока
+					heightFactor = clamp<float>((zLow - playerCamZ) * invTransitionZone, 0.0f, 1.0f);
+				} else if (pitchDeg > 0.0f) {
+					// Взгляд вниз: плавный наклон только если макушка спрайта ниже камеры игрока
+					heightFactor = clamp<float>((playerCamZ - zHigh) * invTransitionZone, 0.0f, 1.0f);
+				}
+			}
+			pitchDeg = clamp<float>(pitchDeg * 0.3889f * heightFactor, -25.0f, 35.0f); // 0.3889f = 35.0f / 90.0f
+		}
+*/
 		mat.MakeIdentity();
-		mat.Translate(center.X, center.Z, center.Y); // move to sprite center
-		mat.Scale(1.0, 1.0/pixelstretch, 1.0);	// unstretch sprite by level aspect ratio
+		mat.Translate(pivotX, pivotZ, pivotY); // move to pivot
+		mat.Scale(1.0, 1.0 / pixelstretch, 1.0); // unstretch sprite by level aspect ratio
 
 		// [MC] Sprite offsets.
 		if (!offset.isZero())
@@ -474,8 +511,8 @@ bool HWSprite::CalculateVertices(HWDrawInfo* di, FVector3* v, DVector3* vp)
 		{
 			// [CMB] Rotate relative to camera XY position, not just camera direction,
 			// which is nicer in VR
-			float xrel = center.X - vp->X;
-			float yrel = center.Y - vp->Y;
+			float xrel = pivotX - vp->X;
+			float yrel = pivotY - vp->Y;
 			float absAngleDeg = atan2(-yrel, xrel) * (180 / M_PI);
 			float counterRotationDeg = 270. - HWAngles.Yaw.Degrees(); // counteracts existing sprite rotation
 			float relAngleDeg = counterRotationDeg + absAngleDeg;
@@ -506,21 +543,20 @@ bool HWSprite::CalculateVertices(HWDrawInfo* di, FVector3* v, DVector3* vp)
 			if (useOffsets) mat.Translate(xx, zz, yy);
 			if (drawWithXYBillboard)
 			{
-				mat.Rotate(-sin(angleRad), 0, cos(angleRad), -HWAngles.Pitch.Degrees());
+				mat.Rotate(-sin(angleRad), 0, cos(angleRad), -pitchDeg);
 			}
 			mat.Rotate(cos(angleRad), 0, sin(angleRad), rollDegrees);
 			if (useOffsets) mat.Translate(-xx, -zz, -yy);
 		}
 		else if (drawWithXYBillboard)
 		{
-			// Rotate the sprite about the vector starting at the center of the sprite
-			// triangle strip and with direction orthogonal to where the player is looking
-			// in the x/y plane.
-			mat.Rotate(-sin(angleRad), 0, cos(angleRad), -HWAngles.Pitch.Degrees());
+			// Rotate the sprite about the vector starting at the pivot
+			// and with direction orthogonal to where the player is looking in the x/y plane.
+			mat.Rotate(-sin(angleRad), 0, cos(angleRad), -pitchDeg);
 		}
 
-		mat.Scale(1.0, pixelstretch, 1.0);	// stretch sprite by level aspect ratio
-		mat.Translate(-center.X, -center.Z, -center.Y); // retreat from sprite center
+		mat.Scale(1.0, pixelstretch, 1.0); // stretch sprite by level aspect ratio
+		mat.Translate(-pivotX, -pivotZ, -pivotY); // retreat from pivot
 
 		v[0] = mat * FVector3(x1, z1, y1);
 		v[1] = mat * FVector3(x2, z1, y2);
@@ -529,71 +565,86 @@ bool HWSprite::CalculateVertices(HWDrawInfo* di, FVector3* v, DVector3* vp)
 	}
 	else // traditional "Y" billboard mode
 	{
-		if (doRoll || !offset.isZero() || (actor && (actor->renderflags2 & RF2_ISOMETRICSPRITES)))
+		const bool useFloorPivot = (actor != nullptr && !isWallSprite && !doRoll);
+		const float pivotX = useFloorPivot ? x : center.X;
+		const float pivotY = useFloorPivot ? y : center.Y;
+		const float pivotZ = useFloorPivot ? z : center.Z;
+
+		const float pitchDeg = useFloorPivot
+			? clamp<float>(HWAngles.Pitch.Degrees() * (0.3889f /*35.0f / 90.0f*/), -20.0f, 35.0f)
+			: HWAngles.Pitch.Degrees();
+
+		// Вычисляем угол направления от спрайта на позицию игрока в плоскости XY
+		float xrel = pivotX - vp->X;
+		float yrel = pivotY - vp->Y;
+		float absAngleDeg = atan2(-yrel, xrel) * (180.0 / M_PI);
+		float counterRotationDeg = 270.0 - HWAngles.Yaw.Degrees(); // компенсируем базовый поворот на камеру
+		float relAngleDeg = counterRotationDeg + absAngleDeg;
+
+		mat.MakeIdentity();
+		mat.Translate(pivotX, pivotZ, pivotY);
+		mat.Scale(1.0, 1.0 / pixelstretch, 1.0); // снимаем растяжение пикселей уровня
+
+		if (!offset.isZero())
+			HandleSpriteOffsets(&mat, &HWAngles, &offset, false);
+
+		// Поворот по горизонтали (Yaw) строго на позицию игрока
+		mat.Rotate(0, 1, 0, relAngleDeg);
+
+		// Вектор оси наклона с учётом нового угла поворота на игрока
+		float targetYawRad = (FAngle::fromDeg(270.0 - HWAngles.Yaw.Degrees() + relAngleDeg)).Radians();
+
+		if (doRoll)
 		{
-			mat.MakeIdentity();
+			float angleRad = (FAngle::fromDeg(270.) - HWAngles.Yaw).Radians();
+			float rollDegrees = Angles.Roll.Degrees();
+			float pitchDegrees = 0.0;
 
-			if (!offset.isZero())
-				HandleSpriteOffsets(&mat, &HWAngles, &offset, false);
-			
-			if (doRoll)
+			if (AngledRoll)
 			{
-				// Compute center of sprite
-				float angleRad = (FAngle::fromDeg(270.) - HWAngles.Yaw).Radians();
-				float rollDegrees = Angles.Roll.Degrees();
-				float pitchDegrees = 0.0;
+				rollDegrees = fmodf(rollDegrees, 360.0f);
+				DAngle ang = di->Viewpoint.Angles.Yaw + actor->Angles.Yaw + actor->AngledRollOffset - DAngle::fromDeg(90.0);
+				angleRad = ang.Radians();
+				FVector3 relPos = center - FVector3(di->Viewpoint.Pos);
+				if (useOffsets) relPos += FVector3(xx, yy, zz);
 
-				if (AngledRoll)
-				{
-					rollDegrees = fmodf(rollDegrees, 360.0f);
-					DAngle ang = di->Viewpoint.Angles.Yaw + actor->Angles.Yaw + actor->AngledRollOffset - DAngle::fromDeg(90.0);
-					angleRad = ang.Radians();
-					FVector3 relPos = center - FVector3(di->Viewpoint.Pos);
-					if (useOffsets) relPos += FVector3(xx, yy, zz);
-
-					Matrix3x4 rolltilt;
-					rolltilt.MakeIdentity();
-					ang = actor->Angles.Yaw + actor->AngledRollOffset;
-					rolltilt.Rotate(ang.Cos(), ang.Sin(), 0.0, -rollDegrees);
-					pitchDegrees = 270.0 - DVector3(rolltilt * relPos).Angle().Degrees();
-				}
-
-				mat.Translate(center.X, center.Z, center.Y);
-				if (useOffsets) mat.Translate(xx, zz, yy);
-				mat.Scale(1.0, 1.0/pixelstretch, 1.0);	// unstretch sprite by level aspect ratio
-				if (AngledRoll) mat.Rotate(0.0, 1.0, 0.0, -HWAngles.Yaw.Degrees()); // Cancel regular Y-billboarding
-				mat.Rotate(cos(angleRad), 0, sin(angleRad), rollDegrees);
-				if (AngledRoll) mat.Rotate(0.0, 1.0, 0.0, pitchDegrees); // New Y-billboarding about rolled z-axis
-				mat.Scale(1.0, pixelstretch, 1.0);	// stretch sprite by level aspect ratio
-				if (useOffsets) mat.Translate(-xx, -zz, -yy);
-				mat.Translate(-center.X, -center.Z, -center.Y);
+				Matrix3x4 rolltilt;
+				rolltilt.MakeIdentity();
+				ang = actor->Angles.Yaw + actor->AngledRollOffset;
+				rolltilt.Rotate(ang.Cos(), ang.Sin(), 0.0, -rollDegrees);
+				pitchDegrees = 270.0 - DVector3(rolltilt * relPos).Angle().Degrees();
 			}
 
-			if (actor && (actor->renderflags2 & RF2_ISOMETRICSPRITES) && di->Viewpoint.bDoOrtho)
-			{
-				float angleRad = (FAngle::fromDeg(270.) - HWAngles.Yaw).Radians();
-				mat.Translate(center.X, center.Z, center.Y);
-				mat.Translate(0.0, z2 - center.Z, 0.0);
-				mat.Rotate(-sin(angleRad), 0, cos(angleRad), -actor->isotheta);
-				mat.Translate(0.0, center.Z - z2, 0.0);
-				mat.Translate(-center.X, -center.Z, -center.Y);
-			}
-
-			v[0] = mat * FVector3(x1, z1, y1);
-			v[1] = mat * FVector3(x2, z1, y2);
-			v[2] = mat * FVector3(x1, z2, y1);
-			v[3] = mat * FVector3(x2, z2, y2);
-			
+			if (useOffsets) mat.Translate(xx, zz, yy);
+			if (AngledRoll) mat.Rotate(0.0, 1.0, 0.0, -HWAngles.Yaw.Degrees());
+			mat.Rotate(-sin(targetYawRad), 0, cos(targetYawRad), -pitchDeg);
+			mat.Rotate(cos(angleRad), 0, sin(angleRad), rollDegrees);
+			if (AngledRoll) mat.Rotate(0.0, 1.0, 0.0, pitchDegrees);
+			if (useOffsets) mat.Translate(-xx, -zz, -yy);
 		}
 		else
 		{
-			v[0] = FVector3(x1, z1, y1);
-			v[1] = FVector3(x2, z1, y2);
-			v[2] = FVector3(x1, z2, y1);
-			v[3] = FVector3(x2, z2, y2);
+			// Вертикальный наклон спрайта относительно его основания
+			mat.Rotate(-sin(targetYawRad), 0, cos(targetYawRad), -pitchDeg);
 		}
-		
+
+		if (actor && (actor->renderflags2 & RF2_ISOMETRICSPRITES) && di->Viewpoint.bDoOrtho)
+		{
+			float angleRad = (FAngle::fromDeg(270.) - HWAngles.Yaw).Radians();
+			mat.Translate(0.0, z2 - pivotZ, 0.0);
+			mat.Rotate(-sin(angleRad), 0, cos(angleRad), -actor->isotheta);
+			mat.Translate(0.0, pivotZ - z2, 0.0);
+		}
+
+		mat.Scale(1.0, pixelstretch, 1.0); // возвращаем растяжение пикселей уровня
+		mat.Translate(-pivotX, -pivotZ, -pivotY);
+
+		v[0] = mat * FVector3(x1, z1, y1);
+		v[1] = mat * FVector3(x2, z1, y2);
+		v[2] = mat * FVector3(x1, z2, y1);
+		v[3] = mat * FVector3(x2, z2, y2);
 	}
+
 	return false;
 }
 
